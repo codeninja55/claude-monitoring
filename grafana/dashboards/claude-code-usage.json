@@ -432,6 +432,113 @@
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "id": 110,
+      "title": "Cost breakdown by token type",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "currencyUSD"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Output" }, "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Cache creation" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Cache read" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Input" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
+      "id": 30,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "right", "calcs": ["sum"] },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "tooltip": { "mode": "single" }
+      },
+      "title": "Cost distribution by token type",
+      "type": "piechart",
+      "targets": [
+        {
+          "expr": "sum(increase(claude_code_token_usage{type=\"input\", model=~\"$model\"}[$__range])) / 1e6 * 6.15",
+          "legendFormat": "Input",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(increase(claude_code_token_usage{type=\"output\", model=~\"$model\"}[$__range])) / 1e6 * 30.75",
+          "legendFormat": "Output",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(increase(claude_code_token_usage{type=\"cacheRead\", model=~\"$model\"}[$__range])) / 1e6 * 0.615",
+          "legendFormat": "Cache read",
+          "refId": "C"
+        },
+        {
+          "expr": "sum(increase(claude_code_token_usage{type=\"cacheCreation\", model=~\"$model\"}[$__range])) / 1e6 * 7.6875",
+          "legendFormat": "Cache creation",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": { "mode": "normal", "group": "A" },
+            "lineWidth": 0,
+            "showPoints": "never"
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Output" }, "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Cache creation" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Cache read" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Input" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 24 },
+      "id": 31,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "Cost over time by token type",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(increase(claude_code_token_usage{type=\"input\", model=~\"$model\"}[$__rate_interval])) / 1e6 * 6.15",
+          "legendFormat": "Input",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(increase(claude_code_token_usage{type=\"output\", model=~\"$model\"}[$__rate_interval])) / 1e6 * 30.75",
+          "legendFormat": "Output",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(increase(claude_code_token_usage{type=\"cacheRead\", model=~\"$model\"}[$__rate_interval])) / 1e6 * 0.615",
+          "legendFormat": "Cache read",
+          "refId": "C"
+        },
+        {
+          "expr": "sum(increase(claude_code_token_usage{type=\"cacheCreation\", model=~\"$model\"}[$__rate_interval])) / 1e6 * 7.6875",
+          "legendFormat": "Cache creation",
+          "refId": "D"
+        }
+      ],
+      "interval": "1h"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
       "id": 103,
       "title": "Tool usage (from events)",
       "type": "row"
@@ -1035,5 +1142,5 @@
   "timezone": "browser",
   "title": "Claude Code usage",
   "uid": "claude-code-usage",
-  "version": 8
+  "version": 9
 }
