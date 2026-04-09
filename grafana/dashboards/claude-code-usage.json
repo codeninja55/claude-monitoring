@@ -709,6 +709,303 @@
         }
       ],
       "interval": "1h"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 59 },
+      "id": 107,
+      "title": "Cache and cost efficiency",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "green", "value": 80 }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 60 },
+      "id": 21,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Cache hit ratio",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(increase(claude_code_token_usage{type=\"cacheRead\"}[$__rate_interval])) / (sum(increase(claude_code_token_usage{type=\"cacheRead\"}[$__rate_interval])) + sum(increase(claude_code_token_usage{type=\"input\"}[$__rate_interval])) + sum(increase(claude_code_token_usage{type=\"cacheCreation\"}[$__rate_interval]))) * 100",
+          "legendFormat": "Cache hit %",
+          "refId": "A"
+        }
+      ],
+      "interval": "1h"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "auto",
+            "pointSize": 5
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 60 },
+      "id": 22,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "Cost per API request",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "avg_over_time({service_name=\"claude-code\", event_name=\"api_request\"} | unwrap cost_usd [$__auto]) by (model)",
+          "legendFormat": "avg {{ model }}",
+          "refId": "A"
+        },
+        {
+          "expr": "max_over_time({service_name=\"claude-code\", event_name=\"api_request\"} | unwrap cost_usd [$__auto]) by (model)",
+          "legendFormat": "max {{ model }}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": { "mode": "normal", "group": "A" },
+            "lineWidth": 0,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "cache read" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "output" }, "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "input" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 60 },
+      "id": 23,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "Avg tokens per API request",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "avg_over_time({service_name=\"claude-code\", event_name=\"api_request\"} | unwrap cache_read_tokens [$__auto]) by (model)",
+          "legendFormat": "cache read",
+          "refId": "A"
+        },
+        {
+          "expr": "avg_over_time({service_name=\"claude-code\", event_name=\"api_request\"} | unwrap output_tokens [$__auto]) by (model)",
+          "legendFormat": "output",
+          "refId": "B"
+        },
+        {
+          "expr": "avg_over_time({service_name=\"claude-code\", event_name=\"api_request\"} | unwrap input_tokens [$__auto]) by (model)",
+          "legendFormat": "input",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 68 },
+      "id": 108,
+      "title": "Activity patterns",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed" },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "showPoints": "never"
+          },
+          "unit": "short",
+          "color": { "fixedColor": "blue", "mode": "fixed" }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 69 },
+      "id": 24,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Prompt activity",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "count_over_time({service_name=\"claude-code\", event_name=\"user_prompt\"} [$__auto])",
+          "legendFormat": "Prompts",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 0,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 69 },
+      "id": 25,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "MCP tool usage",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "count_over_time({service_name=\"claude-code\", event_name=\"tool_result\"} | tool_name=\"mcp_tool\" [$__auto])",
+          "legendFormat": "MCP calls",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 69 },
+      "id": 26,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "title": "Avg tool duration",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "avg_over_time({service_name=\"claude-code\", event_name=\"tool_result\"} | unwrap duration_ms [$__auto]) by (tool_name)",
+          "legendFormat": "{{ tool_name }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 77 },
+      "id": 109,
+      "title": "Speed mode and event log",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "fast" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "normal" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 78 },
+      "id": 27,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "right" },
+        "pieType": "donut",
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "tooltip": { "mode": "single" }
+      },
+      "title": "Speed mode",
+      "type": "piechart",
+      "targets": [
+        {
+          "expr": "count_over_time({service_name=\"claude-code\", event_name=\"api_request\"} | speed=\"fast\" [$__auto])",
+          "legendFormat": "fast",
+          "refId": "A"
+        },
+        {
+          "expr": "count_over_time({service_name=\"claude-code\", event_name=\"api_request\"} | speed=\"normal\" [$__auto])",
+          "legendFormat": "normal",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 78 },
+      "id": 28,
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      },
+      "title": "Event log",
+      "type": "logs",
+      "targets": [
+        {
+          "expr": "{service_name=\"claude-code\"}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "schemaVersion": 39,
@@ -738,5 +1035,5 @@
   "timezone": "browser",
   "title": "Claude Code usage",
   "uid": "claude-code-usage",
-  "version": 7
+  "version": 8
 }
