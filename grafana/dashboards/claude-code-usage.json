@@ -494,12 +494,12 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code\", event_name=\"tool_result\", success=\"true\"} [$__auto]))",
+          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code\", event_name=\"tool_result\"} | success=\"true\" [$__auto]))",
           "legendFormat": "{{ tool_name }} (success)",
           "refId": "A"
         },
         {
-          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code\", event_name=\"tool_result\", success=\"false\"} [$__auto]))",
+          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code\", event_name=\"tool_result\"} | success=\"false\" [$__auto]))",
           "legendFormat": "{{ tool_name }} (failed)",
           "refId": "B"
         }
@@ -738,5 +738,5 @@
   "timezone": "browser",
   "title": "Claude Code usage",
   "uid": "claude-code-usage",
-  "version": 6
+  "version": 7
 }
