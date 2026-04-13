@@ -1,0 +1,71 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "0.0.0.0:4317:4317"   # OTLP gRPC — LAN devices send here
+      - "0.0.0.0:4318:4318"   # OTLP HTTP
+    networks:
+      - monitoring
+    depends_on:
+      - mimir
+      - loki
+      - tempo
+
+  mimir:
+    image: grafana/mimir:2.16.0
+    restart: unless-stopped
+    command: ["--config.file=/etc/mimir/config.yaml"]
+    volumes:
+      - ./mimir/config.yaml:/etc/mimir/config.yaml:ro
+      - /opt/data/monitoring/mimir:/data/mimir
+    networks:
+      - monitoring
+
+  loki:
+    image: grafana/loki:3.5.0
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./loki/config.yaml:/etc/loki/config.yaml:ro
+      - /opt/data/monitoring/loki:/data/loki
+    networks:
+      - monitoring
+
+  tempo:
+    image: grafana/tempo:2.7.0
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/config.yaml"]
+    volumes:
+      - ./tempo/config.yaml:/etc/tempo/config.yaml:ro
+      - /opt/data/monitoring/tempo:/data/tempo
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana-oss:11.6.0
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - /opt/data/monitoring/grafana:/var/lib/grafana
+    ports:
+      - "0.0.0.0:3000:3000"
+    networks:
+      - monitoring
+    depends_on:
+      - mimir
+      - loki
+      - tempo
+
+networks:
+  monitoring:
+    driver: bridge
