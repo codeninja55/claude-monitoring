@@ -2187,15 +2187,16 @@
           "mode": "multi"
         }
       },
-      "title": "Prompt activity",
+      "title": "Prompt activity by host",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "count_over_time({service_name=\"claude-code\", event_name=\"user_prompt\"} [$__auto])",
-          "legendFormat": "Prompts",
+          "expr": "sum by (host) (count_over_time({service_name=\"claude-code\", event_name=\"user_prompt\"}[$__auto]))",
+          "legendFormat": "{{ host }}",
           "refId": "A"
         }
-      ]
+      ],
+      "description": "User prompts per unit time, grouped by host \u2014 shows which machines are active."
     },
     {
       "datasource": {
@@ -2233,15 +2234,16 @@
           "mode": "multi"
         }
       },
-      "title": "MCP tool usage",
+      "title": "MCP tool usage by server",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "count_over_time({service_name=\"claude-code\", event_name=\"tool_result\"} | tool_name=\"mcp_tool\" [$__auto])",
-          "legendFormat": "MCP calls",
+          "expr": "sum by (mcp_server_name) (count_over_time({service_name=\"claude-code\", event_name=\"tool_result\"} | tool_name=\"mcp_tool\" | line_format \"{{.tool_parameters}}\" | json mcp_server_name=\"mcp_server_name\" [$__auto]))",
+          "legendFormat": "{{ mcp_server_name }}",
           "refId": "A"
         }
-      ]
+      ],
+      "description": "MCP tool invocations grouped by MCP server. Parses `mcp_server_name` out of the structured `tool_parameters` JSON via `line_format` + `json`."
     },
     {
       "datasource": {
@@ -2324,6 +2326,447 @@
         "x": 0,
         "y": 90
       },
+      "id": 112,
+      "title": "Session and behaviour",
+      "type": "row"
+    },
+    {
+      "id": 60,
+      "type": "table",
+      "title": "Cost per session",
+      "description": "Cumulative cost grouped by session_id over the selected range. Expensive sessions are usually worth investigating \u2014 often long conversations with tool loops or oversized context.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": ""
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 91
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "session_id"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Cost"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum by (session_id) (increase(claude_code_cost_usage{model=~\"$model\"}[$__range]))",
+          "legendFormat": "{{ session_id }}",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "session_id": "session_id",
+              "Value": "Cost"
+            },
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "type": "timeseries",
+      "title": "API error rate",
+      "description": "Ratio of api_error events to api_request events, as a percentage. Spikes are worth correlating with model outages, rate-limit windows, or network issues.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 91
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "percent",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(count_over_time({service_name=\"claude-code\", event_name=\"api_error\"}[$__auto])) / clamp_min(sum(count_over_time({service_name=\"claude-code\", event_name=\"api_request\"}[$__auto])), 1) * 100",
+          "legendFormat": "error rate %",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 62,
+      "type": "table",
+      "title": "Skill activations",
+      "description": "Count of `skill_activated` events by skill_name over the selected range. Useful for spotting which skills actually earn their keep.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 91
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skill_name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Activations"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum by (skill_name) (count_over_time({service_name=\"claude-code\", event_name=\"skill_activated\"}[$__range]))",
+          "legendFormat": "{{ skill_name }}",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "skill_name": "skill_name",
+              "Value": "Activations"
+            },
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 63,
+      "type": "table",
+      "title": "Top bash commands",
+      "description": "Top-N `Bash` tool invocations by first-word command, extracted from `tool_parameters.bash_command`. Repeat offenders often signal scripts worth pre-committing.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 99
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "topk(20, sum by (bash_command) (count_over_time({service_name=\"claude-code\", event_name=\"tool_result\"} | tool_name=\"Bash\" | line_format \"{{.tool_parameters}}\" | json bash_command=\"bash_command\" [$__range])))",
+          "legendFormat": "{{ bash_command }}",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "bash_command": "Command",
+              "Value": "Count"
+            },
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 64,
+      "type": "table",
+      "title": "File edit hotspots (top directory)",
+      "description": "Count of Edit/Write/MultiEdit tool invocations grouped by top-level directory path extracted from `tool_input.file_path`. Shows where Claude is actually changing code.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 99
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "top_dir"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Edits"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "topk(20, sum by (top_dir) (count_over_time({service_name=\"claude-code\", event_name=\"tool_result\"} | tool_name=~\"Edit|Write|MultiEdit\" | line_format \"{{.tool_input}}\" | json file_path=\"file_path\" | line_format \"{{.file_path}}\" | regexp `^(?P<top_dir>(?:/[^/]+){1,3})` [$__range])))",
+          "legendFormat": "{{ top_dir }}",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "top_dir": "Top directory",
+              "Value": "Edits"
+            },
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 65,
+      "type": "piechart",
+      "title": "Subagent usage by type",
+      "description": "Count of `Agent` tool invocations grouped by `subagent_type` parsed from `tool_input`. Shows which specialised subagents are actually being used.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 99
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "values": [
+            "value"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "sum"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (subagent_type) (count_over_time({service_name=\"claude-code\", event_name=\"tool_result\"} | tool_name=\"Agent\" | line_format \"{{.tool_input}}\" | json subagent_type=\"subagent_type\" [$__range]))",
+          "legendFormat": "{{ subagent_type }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 107
+      },
       "id": 111,
       "title": "Prompts and tool use",
       "type": "row"
@@ -2341,7 +2784,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 91
+        "y": 108
       },
       "options": {
         "showTime": true,
@@ -2373,7 +2816,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 91
+        "y": 108
       },
       "options": {
         "showTime": true,
@@ -2398,7 +2841,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 101
+        "y": 118
       },
       "id": 109,
       "title": "Event log",
@@ -2413,7 +2856,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 102
+        "y": 119
       },
       "id": 28,
       "options": {
