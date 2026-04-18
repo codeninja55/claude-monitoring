@@ -2,6 +2,12 @@
 
 A Grafana LGTM observability stack for monitoring Claude Code usage via OpenTelemetry. Collects metrics, events, and traces from Claude Code instances across your LAN and visualizes them in a pre-built Grafana dashboard.
 
+## Screenshots
+
+![Claude Code usage dashboard](docs/images/dashboard-overview.png)
+
+The pre-built dashboard surfaces key metrics (sessions, tokens, cost, active time), ROI and efficiency stats, token trends, per-model cost breakdown, cache and API efficiency, tool usage, API performance, productivity, activity patterns, and a live event log.
+
 ## Architecture
 
 ```
@@ -130,6 +136,49 @@ To verify each signal individually in Grafana Explore:
 ### Traces (via Tempo)
 
 Distributed traces link each user prompt to the API requests and tool executions it triggers. Traces are a beta feature requiring `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`.
+
+## Dashboard walkthrough
+
+The pre-built `Claude Code usage` dashboard is organised top-to-bottom by narrowing zoom level:
+
+| Row | Purpose | Sample panels |
+|-----|---------|---------------|
+| **Key metrics** | Sessions, tokens, cost, active time at a glance | Sessions, Est. cost, Input/Output/Cache read tokens |
+| **ROI and efficiency** | Cost per commit/LoC, cache hit ratio, tool rejection rate | Cost per commit, Cache hit ratio, Tool rejection rate |
+| **Token trends** | Daily token usage broken down by type | Daily token usage (stacked), Cost over time |
+| **Cost breakdown** | Per-model × per-token-type cost attribution using list prices | Cost by token type (pie), Pricing reference, Cost over time by token type |
+| **Cache and API efficiency** | Cache efficacy over time + cost per call + context growth | Cache hit ratio, Cost per API request, Context window growth |
+| **Model breakdown** | 2×2 grid: token distribution and cost by model, plus per-model cache and context ratios | Token distribution, Cost by model, Cache hit ratio by model, Context:output ratio |
+| **Tool usage** | Frequency, success/failure, duration by tool | Tool usage frequency, Success vs failure, Avg duration |
+| **API performance** | Latency and errors | API request latency, API errors |
+| **Productivity** | Lines of code + active-time split | Lines of code, Active time breakdown |
+| **Activity patterns** | Per-host prompt activity, MCP tool usage by server, edit-decisions breakdown | Prompt activity by host, MCP tool usage by server |
+| **Session and behaviour** | Per-session cost, skill activations, top bash commands, edit hotspots, subagent usage, API error rate | Cost per session, Top bash commands, Skill activations, Subagent usage by type |
+| **Waste detection** | Flags specifically tuned to "find wasteful behaviours" (see below) | Expensive sessions, Loop suspects, Idle sessions, Opus share, Cost per API call |
+| **Prompts and tool use** | Live feed of recent prompts + tool invocations with parsed metadata | Recent prompts, Recent tool invocations |
+| **Event log** | Raw event firehose for ad-hoc querying | Event log |
+
+### Waste detection row
+
+The bottom-most analytical row is designed to surface behaviours that burn spend without proportionate output:
+
+| Panel | Fires on | Thresholds |
+|-------|----------|-----------|
+| Expensive sessions | Top sessions by cost over range | Yellow ≥ \$10, Red ≥ \$30 |
+| Loop suspects | `(prompt_id, tool_name)` pairs where one prompt fired the same tool many times | Yellow ≥ 10, Red ≥ 20 calls |
+| Idle sessions | Sessions with high `active_time_total{type=user}` (hours) — cache-bloat-without-output | Yellow ≥ 1h, Red ≥ 3h |
+| Opus share | % of spend on `claude-opus-4.*` | Yellow ≥ 60%, Red ≥ 85% |
+| Cost per API call | Avg `cost_usd` per `api_request` — rises as context bloats | Yellow ≥ \$0.20, Red ≥ \$0.75 |
+
+## Alerts
+
+A Grafana alert rule is provisioned via `grafana/provisioning/alerting/rules.yaml`:
+
+| Alert | Condition | For |
+|-------|-----------|-----|
+| Claude Code API error rate above 5% | `api_error / api_request > 5%` over rolling 5-minute window | 5 minutes |
+
+The alert fires into Grafana's Alerting UI (Alerting → Alert rules). Contact points (email / Slack / webhook) are not pre-configured — add one under Alerting → Contact points and a notification policy to route this alert. To disable, delete the YAML file and restart Grafana.
 
 ## Running the stack
 
@@ -350,6 +399,29 @@ sudo ufw allow 4317/tcp
 sudo ufw allow 4318/tcp
 sudo ufw allow 3000/tcp
 ```
+
+## Statusline
+
+The repo ships a `statusline.sh` script that customises the Claude Code status line with richer context than the default. It reads the harness JSON from stdin and prints a single coloured line covering:
+
+- Model name and current directory
+- Git branch, uncommitted file count (or the single filename when only one changed), sync status vs. upstream, and time since last fetch
+- AWS profile (`$AWS_PROFILE`) and Kubernetes context (`kubectl config current-context`)
+- Language versions for detected projects (Go, Node, Python)
+- Context-window usage bar with percent of the configured window
+
+Wire it up via `~/.claude/settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash /absolute/path/to/statusline.sh"
+  }
+}
+```
+
+To change the accent colour, edit the `COLOR` variable at the top of `statusline.sh`. Supported values: `gray`, `orange`, `blue`, `teal`, `green`, `lavender`, `rose`, `gold`, `slate`, `cyan`.
 
 ## Privacy
 
