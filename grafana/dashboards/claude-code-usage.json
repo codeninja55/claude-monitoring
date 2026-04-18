@@ -789,7 +789,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "sum(count_over_time({service_name=\"claude-code\", event_name=\"tool_decision\"} | decision=\"reject\" [$__range])) / clamp_min(sum(count_over_time({service_name=\"claude-code\", event_name=\"tool_decision\"} [$__range])), 1) * 100",
+          "expr": "(sum(count_over_time({service_name=\"claude-code\", event_name=\"tool_decision\"} | decision=\"reject\" [$__range]))) / (sum(count_over_time({service_name=\"claude-code\", event_name=\"tool_decision\"}[$__range]))) * 100",
           "legendFormat": "",
           "refId": "A"
         }
@@ -2471,7 +2471,7 @@
       },
       "targets": [
         {
-          "expr": "sum(count_over_time({service_name=\"claude-code\", event_name=\"api_error\"}[$__auto])) / clamp_min(sum(count_over_time({service_name=\"claude-code\", event_name=\"api_request\"}[$__auto])), 1) * 100",
+          "expr": "(sum(count_over_time({service_name=\"claude-code\", event_name=\"api_error\"}[$__auto]))) / (sum(count_over_time({service_name=\"claude-code\", event_name=\"api_request\"}[$__auto]))) * 100",
           "legendFormat": "error rate %",
           "refId": "A"
         }

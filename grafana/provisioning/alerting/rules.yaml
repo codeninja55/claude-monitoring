@@ -1,0 +1,67 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: claude-code-health
+    folder: Claude Code
+    interval: 1m
+    rules:
+      - uid: claude-code-api-error-rate
+        title: Claude Code API error rate above 5%
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: loki
+            model:
+              refId: A
+              expr: |
+                (sum(count_over_time({service_name="claude-code", event_name="api_error"}[5m])))
+                /
+                (sum(count_over_time({service_name="claude-code", event_name="api_request"}[5m])))
+                * 100
+              queryType: range
+              intervalMs: 60000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    params: [5]
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: Claude Code API error rate exceeded 5%
+          description: |
+            The ratio of `api_error` to `api_request` events has been above 5% for 5 minutes
+            over a rolling 5-minute window. Likely causes: provider outage, rate-limit,
+            network issues, or a pathological retry loop. Check panel 17 (API errors) and
+            panel 61 (API error rate) in the Claude Code usage dashboard.
+        labels:
+          severity: warning
+          service: claude-code
