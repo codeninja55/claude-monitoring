@@ -67,12 +67,13 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "count(claude_code_session_count)",
+          "expr": "count(count by (session_id) (max_over_time(claude_code_session_count[$__range])))",
           "legendFormat": "Sessions",
           "refId": "A",
           "instant": true
         }
-      ]
+      ],
+      "description": "Distinct sessions that had any activity within the selected time range."
     },
     {
       "datasource": {
@@ -673,7 +674,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "sum(increase(claude_code_token_usage{type=\"cacheRead\"}[$__range])) / clamp_min(sum(increase(claude_code_token_usage{type=\"cacheRead\"}[$__range])) + sum(increase(claude_code_token_usage{type=\"input\"}[$__range])) + sum(increase(claude_code_token_usage{type=\"cacheCreation\"}[$__range])), 1) * 100",
+          "expr": "sum(increase(claude_code_token_usage{type=\"cacheRead\", model=~\"$model\"}[$__range])) / clamp_min(sum(increase(claude_code_token_usage{type=\"cacheRead\", model=~\"$model\"}[$__range])) + sum(increase(claude_code_token_usage{type=\"input\", model=~\"$model\"}[$__range])) + sum(increase(claude_code_token_usage{type=\"cacheCreation\", model=~\"$model\"}[$__range])), 1) * 100",
           "legendFormat": "",
           "refId": "A"
         }
@@ -1306,7 +1307,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(increase(claude_code_token_usage{type=\"cacheRead\"}[$__rate_interval])) / clamp_min(sum(increase(claude_code_token_usage{type=\"cacheRead\"}[$__rate_interval])) + sum(increase(claude_code_token_usage{type=\"input\"}[$__rate_interval])) + sum(increase(claude_code_token_usage{type=\"cacheCreation\"}[$__rate_interval])), 1) * 100",
+          "expr": "sum(increase(claude_code_token_usage{type=\"cacheRead\", model=~\"$model\"}[$__rate_interval])) / clamp_min(sum(increase(claude_code_token_usage{type=\"cacheRead\", model=~\"$model\"}[$__rate_interval])) + sum(increase(claude_code_token_usage{type=\"input\", model=~\"$model\"}[$__rate_interval])) + sum(increase(claude_code_token_usage{type=\"cacheCreation\", model=~\"$model\"}[$__rate_interval])), 1) * 100",
           "legendFormat": "Cache hit %",
           "refId": "A"
         }
@@ -1442,7 +1443,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 38
       },
@@ -1471,90 +1472,6 @@
           "expr": "sum by (model) (increase(claude_code_token_usage{model=~\"$model\"}[$__range]))",
           "legendFormat": "{{ model }}",
           "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "fast"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "normal"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 38
-      },
-      "id": 27,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "right"
-        },
-        "pieType": "donut",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "title": "Speed mode",
-      "type": "piechart",
-      "targets": [
-        {
-          "expr": "count_over_time({service_name=\"claude-code\", event_name=\"api_request\"} | speed=\"fast\" [$__auto])",
-          "legendFormat": "fast",
-          "refId": "A"
-        },
-        {
-          "expr": "count_over_time({service_name=\"claude-code\", event_name=\"api_request\"} | speed=\"normal\" [$__auto])",
-          "legendFormat": "normal",
-          "refId": "B"
         }
       ]
     },
@@ -1600,8 +1517,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
+        "w": 12,
+        "x": 12,
         "y": 38
       },
       "id": 13,
@@ -1641,12 +1558,122 @@
       ]
     },
     {
+      "id": 33,
+      "type": "bargauge",
+      "title": "Cache hit ratio by model",
+      "description": "Per-model cache hit ratio: cacheRead / (cacheRead + input + cacheCreation). Highlights which models/workflows benefit most from Anthropic's prompt caching.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": ""
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (model) (increase(claude_code_token_usage{type=\"cacheRead\", model=~\"$model\"}[$__range])) / clamp_min(sum by (model) (increase(claude_code_token_usage{type=~\"cacheRead|input|cacheCreation\", model=~\"$model\"}[$__range])), 1) * 100",
+          "legendFormat": "{{ model }}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "type": "bargauge",
+      "title": "Context:output ratio by model",
+      "description": "Effective input (input + cacheRead + cacheCreation) per output token, by model. Higher = heavy context for terse output (summarisation, lookup). Lower = concise prompts producing verbose output (code generation).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": ""
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "unit": "none",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (model) (increase(claude_code_token_usage{type=~\"input|cacheRead|cacheCreation\", model=~\"$model\"}[$__range])) / clamp_min(sum by (model) (increase(claude_code_token_usage{type=\"output\", model=~\"$model\"}[$__range])), 1)",
+          "legendFormat": "{{ model }}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 54
       },
       "id": 103,
       "title": "Tool usage",
@@ -1680,7 +1707,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 47
+        "y": 55
       },
       "id": 14,
       "options": {
@@ -1730,7 +1757,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 47
+        "y": 55
       },
       "id": 15,
       "options": {
@@ -1781,7 +1808,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 47
+        "y": 55
       },
       "id": 26,
       "options": {
@@ -1810,7 +1837,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 63
       },
       "id": 104,
       "title": "API performance",
@@ -1840,7 +1867,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 56
+        "y": 64
       },
       "id": 16,
       "options": {
@@ -1896,7 +1923,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 56
+        "y": 64
       },
       "id": 17,
       "options": {
@@ -1925,7 +1952,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 64
+        "y": 72
       },
       "id": 105,
       "title": "Productivity",
@@ -1990,7 +2017,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 65
+        "y": 73
       },
       "id": 18,
       "options": {
@@ -2080,7 +2107,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 65
+        "y": 73
       },
       "id": 20,
       "options": {
@@ -2117,7 +2144,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 81
       },
       "id": 108,
       "title": "Activity patterns",
@@ -2148,7 +2175,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 74
+        "y": 82
       },
       "id": 24,
       "options": {
@@ -2194,7 +2221,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 74
+        "y": 82
       },
       "id": 25,
       "options": {
@@ -2265,7 +2292,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 74
+        "y": 82
       },
       "id": 19,
       "options": {
@@ -2295,7 +2322,83 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 90
+      },
+      "id": 111,
+      "title": "Prompts and tool use",
+      "type": "row"
+    },
+    {
+      "id": 35,
+      "type": "logs",
+      "title": "Recent prompts",
+      "description": "User prompts as they arrive. Structured metadata exposes prompt text, session_id, prompt_length, and terminal_type. Parse with `| json` to filter on fields.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 91
+      },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{service_name=\"claude-code\", event_name=\"user_prompt\"} | json prompt=\"prompt\", session_id=\"session_id\", prompt_length=\"prompt_length\" | line_format \"[{{.session_id | regexReplaceAll \\\"^(.{8}).*\\\" \\\"$1\\\"}}] ({{.prompt_length}} chars) {{.prompt}}\"",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "type": "logs",
+      "title": "Recent tool invocations",
+      "description": "Tool results as they arrive. Structured metadata includes tool_name, success, duration_ms, tool_input (bash commands, file paths), tool_parameters, tool_result_size_bytes, and decision_type.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 91
+      },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{service_name=\"claude-code\", event_name=\"tool_result\"} | json tool_name=\"tool_name\", success=\"success\", duration_ms=\"duration_ms\", tool_input=\"tool_input\" | line_format \"[{{.success}}] {{.tool_name}} ({{.duration_ms}}ms) {{.tool_input}}\"",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 101
       },
       "id": 109,
       "title": "Event log",
@@ -2310,7 +2413,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 102
       },
       "id": 28,
       "options": {
