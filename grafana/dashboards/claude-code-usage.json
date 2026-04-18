@@ -1122,7 +1122,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "### Pricing reference\n\nUSD per **1M tokens** \u2014 Anthropic list prices for Claude 4.x.\n\n| Family | Input | Output | Cache read | Cache write |\n|---|---:|---:|---:|---:|\n| Opus   | \\$15 | \\$75 | \\$1.50 | \\$18.75 |\n| Sonnet | \\$3  | \\$15 | \\$0.30 | \\$3.75  |\n| Haiku  | \\$1  | \\$5  | \\$0.10 | \\$1.25  |\n\nModel family is matched via regex on the `model` label (`claude-opus-4.*`, `claude-sonnet-4.*`, `claude-haiku-4.*`)."
+        "content": "### Pricing reference\n\nUSD per **1M tokens** \u2014 Anthropic **public list prices** for Claude 4.x.\n\n| Family | Input | Output | Cache read | Cache write |\n|---|---:|---:|---:|---:|\n| Opus   | \\$15 | \\$75 | \\$1.50 | \\$18.75 |\n| Sonnet | \\$3  | \\$15 | \\$0.30 | \\$3.75  |\n| Haiku  | \\$1  | \\$5  | \\$0.10 | \\$1.25  |\n\nModel family is matched via regex on the `model` label (`claude-opus-4.*`, `claude-sonnet-4.*`, `claude-haiku-4.*`).\n\n> **Note:** These panels show **list-price cost**, not what you are actually billed. For metered cost (from the API response `cost_usd` field), see panel **Cost over time** and the top-row **Est. cost** stat, which drive off `claude_code_cost_usage` directly. Discounts, prepaid credits, and enterprise agreements will cause list-price totals to diverge from the metered counter."
       },
       "transparent": false
     },
